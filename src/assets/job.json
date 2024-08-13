@@ -1,0 +1,86 @@
+[
+	{
+		"label": "ナイト",
+		"value": "PLD"
+	},
+	{
+		"label": "戦士",
+		"value": "WAR"
+	},
+	{
+		"label": "暗黒騎士",
+		"value": "DRK"
+	},
+	{
+		"label": "ガンブレイカー",
+		"value": "GNB"
+	},
+	{
+		"label": "白魔道士",
+		"value": "WHM"
+	},
+	{
+		"label": "学者",
+		"value": "SCH"
+	},
+	{
+		"label": "占星術師",
+		"value": "AST"
+	},
+	{
+		"label": "賢者",
+		"value": "SGE"
+	},
+	{
+		"label": "モンク",
+		"value": "MNK"
+	},
+	{
+		"label": "竜騎士",
+		"value": "DRG"
+	},
+	{
+		"label": "忍者",
+		"value": "NIN"
+	},
+	{
+		"label": "侍",
+		"value": "SAM"
+	},
+	{
+		"label": "リーパー",
+		"value": "RPR"
+	},
+	{
+		"label": "ヴァイパー",
+		"value": "VPR"
+	},
+	{
+		"label": "吟遊詩人",
+		"value": "BRD"
+	},
+	{
+		"label": "機工士",
+		"value": "MCH"
+	},
+	{
+		"label": "踊り子",
+		"value": "DNC"
+	},
+	{
+		"label": "黒魔道士",
+		"value": "BLM"
+	},
+	{
+		"label": "赤魔道士",
+		"value": "RDM"
+	},
+	{
+		"label": "召喚士",
+		"value": "SMN"
+	},
+	{
+		"label": "ピクトマンサー",
+		"value": "PCT"
+	}
+]

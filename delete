@@ -1,0 +1,7 @@
+<template>
+  <DeleteComp />
+</template>
+
+<script setup>
+//
+</script>

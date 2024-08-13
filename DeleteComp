@@ -1,0 +1,43 @@
+<template>
+  <v-container>
+    <v-form>
+      <v-text-field label="ロビーID" v-model="lobbyId"></v-text-field>
+      <v-btn @click="deleteLobby" color="primary">ロビー削除</v-btn>
+      <v-alert v-if="errorMessage" type="error" dismissible @click:close="errorMessage = ''">
+        {{ errorMessage }}
+      </v-alert>
+      <v-alert v-if="successMessage" type="success" dismissible @click:close="successMessage = ''">
+        {{ successMessage }}
+      </v-alert>
+    </v-form>
+  </v-container>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { supabase } from '@/utils/supabase';
+
+const lobbyId = ref('');
+const errorMessage = ref('');
+const successMessage = ref('');
+
+const deleteLobby = async () => {
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  try {
+    const { data, error } = await supabase.rpc('delete_lobby_and_players', { lobby_uuid: lobbyId.value });
+
+    if (error) {
+      errorMessage.value = 'ロビーとプレイヤーの削除に失敗しました。';
+      console.error('Error details:', error);
+      return;
+    }
+    successMessage.value = 'ロビーと紐づくデータを削除しました。';
+  } catch (error) {
+    errorMessage.value = 'エラーが発生しました。';
+    console.error(error);
+  }
+};
+
+</script>
