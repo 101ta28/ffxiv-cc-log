@@ -12,15 +12,14 @@
 					<v-card-title class="text-h5">Astra</v-card-title>
 					<v-card-text>
 						<v-list>
-							<v-list-item v-for="(player) in astraPlayers" :key="player.id">
+							<v-list-item v-for="(player, index) in astraPlayers" :key="player.id">
 								<v-row class="d-flex align-center">
 									<v-col cols="6">
-										<v-text-field v-model="player.name" label="プレイヤー名" readonly></v-text-field>
+										<v-text-field v-model="player.name" label="プレイヤー名"></v-text-field>
 									</v-col>
 									<v-col cols="6">
 										<v-select :items="jobOptions" v-model="player.job" label="ジョブを選択" item-title="label"
-											item-value="value"
-											@update:modelValue="(newValue) => handleJobChange(player, newValue)"></v-select>
+											item-value="value"></v-select>
 									</v-col>
 								</v-row>
 								<v-row class="d-flex align-center mt-2">
@@ -47,15 +46,14 @@
 					<v-card-title class="text-h5">Umbra</v-card-title>
 					<v-card-text>
 						<v-list>
-							<v-list-item v-for="(player) in umbraPlayers" :key="player.id">
+							<v-list-item v-for="(player, index) in umbraPlayers" :key="player.id">
 								<v-row class="d-flex align-center">
 									<v-col cols="6">
-										<v-text-field v-model="player.name" label="プレイヤー名" readonly></v-text-field>
+										<v-text-field v-model="player.name" label="プレイヤー名"></v-text-field>
 									</v-col>
 									<v-col cols="6">
 										<v-select :items="jobOptions" v-model="player.job" label="ジョブを選択" item-title="label"
-											item-value="value"
-											@update:modelValue="(newValue) => handleJobChange(player, newValue)"></v-select>
+											item-value="value"></v-select>
 									</v-col>
 								</v-row>
 								<v-row class="d-flex align-center mt-2">
@@ -104,6 +102,7 @@
 
 		<v-row>
 			<v-col class="text-center">
+				<v-btn @click="shareScores" color="info" variant="elevated" class="mr-2">点数共有</v-btn>
 				<v-btn @click="completeMatch" color="success" variant="elevated" class="mr-2">試合完了</v-btn>
 				<v-btn @click="shuffleTeams" color="warning" variant="elevated">シャッフル</v-btn>
 			</v-col>
@@ -125,11 +124,29 @@
 				</v-card-actions>
 			</v-card>
 		</v-dialog>
+
+		<v-dialog v-model="shareDialog" max-width="500">
+			<v-card>
+				<v-card-title class="text-h5">点数共有</v-card-title>
+				<v-card-text>
+					<v-text-field v-model="shareMatchNumber" label="試合数" type="number"
+						@change="fetchPastMatchData(shareMatchNumber)"></v-text-field>
+					<v-textarea v-model="shareData" label="共有データ" rows="10" readonly></v-textarea>
+					<v-alert v-if="dialogErrorMessage" type="error" dismissible @click:close="dialogErrorMessage = ''">
+						{{ dialogErrorMessage }}
+					</v-alert>
+				</v-card-text>
+				<v-card-actions>
+					<v-btn @click="copyShareData" color="primary">コピー</v-btn>
+					<v-btn @click="shareDialog = false" color="secondary">閉じる</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
 	</v-container>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { supabase } from '@/utils/supabase';
 import jobOptions from '@/assets/job.json';
@@ -137,14 +154,18 @@ import jobOptions from '@/assets/job.json';
 const router = useRouter();
 const route = useRoute();
 const closeDialog = ref(false);
+const shareDialog = ref(false);
 const jobChangeAlerts = reactive([]);
 let currentMatchNumber = ref(1);
+let shareMatchNumber = ref(currentMatchNumber.value); // 共有用の試合数
+let shareData = ref(''); // 共有データ
 let previousMatchPoints = null;
 
 const astraPlayers = reactive([]);
 const umbraPlayers = reactive([]);
 const errorMessage = ref('');
 const successMessage = ref('');
+const dialogErrorMessage = ref('');
 
 const lobbyUuid = route.params.lobbyUuid;
 
@@ -162,6 +183,12 @@ onMounted(async () => {
 		}
 	} else {
 		errorMessage.value = 'ロビーIDが取得できませんでした。';
+	}
+});
+
+watch(shareMatchNumber, async (newVal) => {
+	if (validateMatchNumber(newVal)) {
+		await fetchPastMatchData(newVal); // 過去の試合データを取得
 	}
 });
 
@@ -209,6 +236,7 @@ const fetchMatchNumber = async () => {
 			// データが存在する場合、その試合番号に +1 して次の試合番号を設定
 			currentMatchNumber.value = (data[0].match_number || 0) + 1;
 		}
+		shareMatchNumber.value = currentMatchNumber.value; // shareMatchNumberを更新
 	} catch (error) {
 		currentMatchNumber.value = 1; // エラー時には1に設定
 	}
@@ -268,6 +296,83 @@ const handleJobChange = async (player, newJob) => {
 	} else {
 		jobChangeAlerts.push({ id: player.id, message });
 	}
+};
+
+const pastMatchData = ref([]); // 過去の試合データを保存する配列
+
+const fetchPastMatchData = async (matchNumber) => {
+	try {
+		const { data, error } = await supabase
+			.from('match_histories')
+			.select('player_id, job, points, team')
+			.eq('lobby_id', lobbyUuid)
+			.eq('match_number', matchNumber);
+
+		if (error) {
+			dialogErrorMessage.value = '過去の試合データの取得に失敗しました。';
+			return;
+		}
+
+		if (data && data.length > 0) {
+			shareData.value = generateShareData(data); // 取得したデータを共有データに変換する関数を呼び出し
+			dialogErrorMessage.value = ''; // エラーメッセージをリセット
+		} else {
+			dialogErrorMessage.value = `試合番号 ${matchNumber} のデータは存在しません。`;
+		}
+	} catch (error) {
+		console.error('過去の試合データ取得エラー:', error);
+		dialogErrorMessage.value = '過去の試合データの取得中にエラーが発生しました。';
+	}
+};
+
+const generateShareData = (data) => {
+	let shareText = `/a ====${shareMatchNumber.value}試合====\n`;
+	const astraData = data.filter(record => record.team === 'Astra');
+	const umbraData = data.filter(record => record.team === 'Umbra');
+
+	shareText += `/a ====Astra====\n`;
+	astraData.forEach(record => {
+		const player = astraPlayers.concat(umbraPlayers).find(p => p.id === record.player_id);
+		const playerName = player ? player.name : '不明';
+		shareText += `/a ${playerName} 持ち点: ${record.points}\n`;
+	});
+
+	shareText += `/a ====Umbra====\n`;
+	umbraData.forEach(record => {
+		const player = astraPlayers.concat(umbraPlayers).find(p => p.id === record.player_id);
+		const playerName = player ? player.name : '不明';
+		shareText += `/a ${playerName} 持ち点: ${record.points}\n`;
+	});
+
+	return shareText;
+};
+
+const copyShareData = () => {
+	navigator.clipboard.writeText(shareData.value)
+		.then(() => {
+			successMessage.value = '共有データをコピーしました。';
+			setTimeout(() => {
+				successMessage.value = '';
+			}, 3000);
+		})
+		.catch(err => {
+			console.error('コピーエラー:', err);
+			dialogErrorMessage.value = 'データのコピーに失敗しました。';
+		});
+};
+
+const shareScores = async () => {
+	await fetchPastMatchData(shareMatchNumber.value);  // 共有データを生成
+	shareDialog.value = true;   // ダイアログを表示
+};
+
+const validateMatchNumber = (value) => {
+	if (isNaN(value) || value < 1 || value > currentMatchNumber.value) {
+		dialogErrorMessage.value = '試合数が無効です。1から現在の試合数までの数値を入力してください。';
+		return false;
+	}
+	dialogErrorMessage.value = '';
+	return true;
 };
 
 const dismissAlert = (id) => {
@@ -363,13 +468,46 @@ const shuffleTeams = () => {
 
 	astraPlayers.forEach(player => player.team = 'Astra');
 	umbraPlayers.forEach(player => player.team = 'Umbra');
-
-	console.log('チームをシャッフルしました');
 };
 
 const completeMatch = async () => {
 	try {
 		const allPlayers = [...astraPlayers, ...umbraPlayers];
+
+		// 名前が変更されたプレイヤーの処理
+		for (const player of allPlayers) {
+			const { data: existingPlayer, error: fetchError } = await supabase
+				.from('players')
+				.select('id, name')
+				.eq('id', player.id)
+				.single();
+
+			if (fetchError || existingPlayer.name !== player.name) {
+				// 新しいプレイヤーとして保存
+				const newPlayer = {
+					name: player.name,
+					job: player.job,
+					points: player.points,
+					team: player.team,
+					lobby_id: lobbyUuid,
+				};
+
+				const { data: insertedPlayer, error: insertError } = await supabase
+					.from('players')
+					.insert(newPlayer)
+					.select()
+					.single();
+
+				if (insertError) {
+					console.error('新しいプレイヤーの保存エラー:', insertError);
+					errorMessage.value = 'プレイヤーの保存に失敗しました。';
+					return;
+				} else {
+					// プレイヤーのIDを新しいものに更新
+					player.id = insertedPlayer.id;
+				}
+			}
+		}
 
 		const hasPointsChanged = allPlayers.some((player, index) => {
 			if (previousMatchPoints) {
