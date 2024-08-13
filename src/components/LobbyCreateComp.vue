@@ -9,8 +9,8 @@
 							required></v-text-field>
 					</v-col>
 					<v-col cols="6">
-						<v-select :items="jobOptions" label="ジョブ" v-model="player.job" item-title="label" item-value="value"
-							:rules="[v => !!v || 'ジョブを選択してください']" required></v-select>
+						<v-select :items="jobOptions" label="ジョブ" v-model="player.job" item-title="label"
+							item-value="value"></v-select>
 					</v-col>
 				</v-row>
 			</v-col>
@@ -22,8 +22,8 @@
 							required></v-text-field>
 					</v-col>
 					<v-col cols="6">
-						<v-select :items="jobOptions" label="ジョブ" v-model="player.job" item-title="label" item-value="value"
-							:rules="[v => !!v || 'ジョブを選択してください']" required></v-select>
+						<v-select :items="jobOptions" label="ジョブ" v-model="player.job" item-title="label"
+							item-value="value"></v-select>
 					</v-col>
 				</v-row>
 			</v-col>
@@ -49,7 +49,7 @@ const dismissError = () => {
 
 const validatePlayers = (players) => {
 	for (const player of players) {
-		if (!player.name || !player.job) {
+		if (!player.name) { // プレイヤー名だけを必須にする
 			return false;
 		}
 	}
@@ -60,7 +60,7 @@ const createLobby = async () => {
 	errorMessage.value = '';
 
 	if (!validatePlayers(astraPlayers) || !validatePlayers(umbraPlayers)) {
-		errorMessage.value = '全てのプレイヤー名とジョブを入力してください。';
+		errorMessage.value = '全てのプレイヤー名を入力してください。';
 		return;
 	}
 
