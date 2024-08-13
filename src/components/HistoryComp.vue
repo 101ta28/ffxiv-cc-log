@@ -30,6 +30,25 @@
         </div>
       </template>
     </v-data-table>
+
+    <!-- マクロ書き出しボタン -->
+    <div class="text-center">
+      <v-btn @click="generateMacroData" color="secondary" class="mr-2">マクロとして書き出し</v-btn>
+    </div>
+
+    <!-- ダイアログで共有データを表示 -->
+    <v-dialog v-model="shareDialog" max-width="500">
+      <v-card>
+        <v-card-title class="text-h5">マクロデータ</v-card-title>
+        <v-card-text>
+          <v-textarea v-model="shareData" label="共有データ" rows="10" readonly></v-textarea>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn @click="copyShareData" color="primary">コピー</v-btn>
+          <v-btn @click="shareDialog = false" color="secondary">閉じる</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -55,6 +74,9 @@ const headers = [
   { title: '点数', key: 'points', align: 'end' },
 ];
 
+const shareDialog = ref(false);
+const shareData = ref('');
+
 const filteredMatchHistory = computed(() => {
   return matchHistory.value.filter(match => match.match_number === page.value);
 });
@@ -76,7 +98,7 @@ const fetchHistory = async () => {
     }
 
     matchHistory.value = data.map(match => {
-      const jobLabel = jobOptions.find(j => j.value === match.job)?.label || match.job;
+      const jobLabel = jobOptions.find(j => j.value === match.job)?.label || 'ジョブ選択無し';
       return {
         match_number: match.match_number,
         player_name: match.players.name,
@@ -92,6 +114,45 @@ const fetchHistory = async () => {
   } catch (err) {
     errorMessage.value = 'エラーが発生しました。';
   }
+};
+
+const generateMacroData = () => {
+  const data = filteredMatchHistory.value;
+  if (data.length === 0) {
+    errorMessage.value = '表示されている試合のデータがありません。';
+    return;
+  }
+
+  let macroText = `/a ====${page.value}試合====\n`;
+  const astraData = data.filter(record => record.team === 'Astra');
+  const umbraData = data.filter(record => record.team === 'Umbra');
+
+  macroText += `/a ====Astra====\n`;
+  astraData.forEach(record => {
+    macroText += `/a ${record.player_name} 持ち点: ${record.points}\n`;
+  });
+
+  macroText += `/a ====Umbra====\n`;
+  umbraData.forEach(record => {
+    macroText += `/a ${record.player_name} 持ち点: ${record.points}\n`;
+  });
+
+  shareData.value = macroText;
+  shareDialog.value = true;
+};
+
+const copyShareData = () => {
+  navigator.clipboard.writeText(shareData.value)
+    .then(() => {
+      successMessage.value = '共有データをコピーしました。';
+      setTimeout(() => {
+        successMessage.value = '';
+      }, 3000);
+    })
+    .catch(err => {
+      console.error('コピーエラー:', err);
+      errorMessage.value = 'データのコピーに失敗しました。';
+    });
 };
 
 // ページがマウントされたときに自動的に履歴を取得
