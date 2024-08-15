@@ -10,12 +10,8 @@
   <v-navigation-drawer v-model="drawer" app temporary>
     <v-list>
       <v-list-item v-for="item in items" :key="item.title" @click="navigate(item.path)">
-        <v-list-item-icon>
           <v-icon>{{ item.icon }}</v-icon>
-        </v-list-item-icon>
-        <v-list-item-content>
           <v-list-item-title>{{ item.title }}</v-list-item-title>
-        </v-list-item-content>
       </v-list-item>
     </v-list>
   </v-navigation-drawer>
